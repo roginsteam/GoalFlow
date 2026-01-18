@@ -1,0 +1,89 @@
+_target_: navsim.agents.goalflow.unified_goalflow_agent.UnifiedGoalFlowAgent
+_convert_: 'all'
+
+config:
+  _target_: navsim.agents.goalflow.goalflow_config.GoalFlowConfig
+  _convert_: 'all'
+
+  # ============ Unified Model Flag ============
+  use_unified_model: true  # Enable query-based goal learning
+
+  # ============ Goal Learning Parameters ============
+  num_goal_queries: 128  # Number of learnable goal queries
+  goal_decoder_layers: 3  # Transformer decoder layers for goals
+  goal_imitation_weight: 10.0  # Weight for imitation loss
+  goal_dac_weight: 10.0  # Weight for DAC loss
+  goal_confidence_weight: 1.0  # Weight for confidence loss
+  goal_weight: 1.0  # Overall weight for goal learning
+
+  # ============ Multi-Modal DiT Parameters ============
+  dit_num_layers: 8  # Number of attention layers in DiT decoder
+  cfg_dropout_prob: 0.1  # CFG dropout probability during training
+  cfg_scale: 1.5  # CFG guidance scale for inference (1.0 = no guidance)
+
+  # ============ Goal Selection Parameters ============
+  topk: 8  # Number of top goals to select
+  im_weight: 0.1  # Weight for imitation score in goal selection
+  dac_weight: 3.0  # Weight for DAC score in goal selection
+  distance_weight: 0.0  # Weight for distance score in goal selection
+
+  # ============ Goal Supervision Parameters ============
+  goal_timestep: 7  # Timestep to use as ground truth goal (0-indexed)
+  goal_confidence_threshold: 5.0  # Distance threshold for positive confidence samples (meters)
+
+  # ============ Trajectory Generation Parameters ============
+  alpha: 3.0  # Curve parameter for curved sampling
+  use_nearest: false  # Select trajectory closest to goal
+  cur_sampling: true  # Use curved timestep schedule
+  train_scale: 0.1  # Noise scale for training
+  test_scale: 0.1  # Noise scale for testing
+  start: true  # Include start point in trajectory
+  infer_steps: 100  # Number of ODE solver steps
+  anchor_size: 10  # Number of trajectory samples per goal
+
+  # ============ Training Configuration ============
+  freeze_perception: false  # Freeze perception module during training
+  training: false  # Set to false for inference/generation
+  only_perception: false  # Only train perception module
+  agent_loss: true  # Include agent detection loss
+
+  # ============ Legacy Parameters (for compatibility) ============
+  generate: 'trajectory'
+  fusion: false
+  beta: 0.0
+  cond_threshold: 0.0
+  cond_weight: 1.0
+  score_path: null
+  theta: 3.0
+  ep_score_weight: 0.0
+  ep_point_weight: 0.0
+  has_navi: false
+  has_student_navi: false
+  voc_path: ''  # No vocabulary needed for query-based approach
+  v99_pretrained_path: ''
+
+  # ============ Architecture Parameters ============
+  tf_d_model: 256  # Transformer model dimension
+  tf_num_head: 8  # Number of attention heads
+  tf_d_ffn: 1024  # Feedforward dimension
+  tf_num_layers: 3  # Number of transformer layers
+  tf_dropout: 0.0  # Dropout rate
+
+  # ============ Trajectory Sampling ============
+  trajectory_sampling:
+    _target_: nuplan.planning.simulation.trajectory.trajectory_sampling.TrajectorySampling
+    _convert_: 'all'
+    time_horizon: 5.5
+    interval_length: 0.5
+
+  # ============ Loss Weights ============
+  trajectory_weight: 10.0  # Weight for trajectory flow matching loss
+  agent_class_weight: 10.0  # Weight for agent classification loss
+  agent_box_weight: 1.0  # Weight for agent bounding box loss
+  bev_semantic_weight: 10.0  # Weight for BEV semantic segmentation loss
+  navi_weight: 0.0  # Legacy parameter
+
+checkpoint_path: null  # Path to checkpoint for loading pretrained weights
+lr: 1e-4  # Learning rate
+step_size: 20  # Learning rate scheduler step size
+gamma: 0.8  # Learning rate scheduler gamma

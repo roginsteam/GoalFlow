@@ -42,6 +42,34 @@ class GoalFlowConfig:
     only_perception: bool=False
     v99_pretrained_path: str=''
     agent_loss: bool=True
+    
+    # ============ New: Trajectory-Supervised Goal Learning Parameters ============
+    # Goal decoder architecture
+    num_goal_queries: int = 128  # Number of learnable goal queries
+    goal_decoder_layers: int = 3  # Number of transformer decoder layers for goals
+    
+    # Multi-modal DiT decoder
+    dit_num_layers: int = 8  # Number of attention layers in DiT decoder
+    cfg_dropout_prob: float = 0.1  # CFG dropout probability during training
+    cfg_scale: float = 1.0  # CFG guidance scale for inference (1.0 = no guidance)
+    
+    # Goal learning loss weights
+    goal_weight: float = 1.0  # Overall weight for goal learning losses
+    goal_imitation_weight: float = 10.0  # Weight for imitation loss
+    goal_dac_weight: float = 10.0  # Weight for DAC loss
+    goal_confidence_weight: float = 1.0  # Weight for confidence loss
+    
+    # Goal selection parameters
+    im_weight: float = 0.1  # Weight for imitation score in goal selection
+    dac_weight: float = 3.0  # Weight for DAC score in goal selection
+    distance_weight: float = 0.0  # Weight for distance score in goal selection
+    
+    # Goal supervision parameters
+    goal_timestep: int = 7  # Timestep to use as ground truth goal (0-indexed)
+    goal_confidence_threshold: float = 5.0  # Distance threshold for positive confidence samples (meters)
+    
+    # Training mode flags
+    use_unified_model: bool = False  # Use unified trajectory-supervised goal learning model
 
     trajectory_sampling: TrajectorySampling = TrajectorySampling(
         time_horizon=5.5, interval_length=0.5
