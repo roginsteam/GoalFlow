@@ -94,6 +94,7 @@ class GoalFlowTrajModel(nn.Module):
             self.trajectory_encoder = nn.Linear(30, self._config.tf_d_model)
             self.trajectory_time_embeddings = RotaryPositionEncoding(self._config.tf_d_model)
             self.type_embedding = nn.Embedding(30, self._config.tf_d_model) # trajectory, noise token
+            self.navi_embedding = nn.Embedding(4, self._config.tf_d_model)
 
             self.global_attention_layers = torch.nn.ModuleList([
                 ParallelAttentionLayer(
@@ -233,6 +234,12 @@ class GoalFlowTrajModel(nn.Module):
                 navi=torch.gather(cluster_points_tensor,dim=1,index=topk_indices).mean(1)[...,:2].unsqueeze(1)
                 navi_feature=pos2posemb2d(navi,num_pos_feats=self._config.tf_d_model//2).squeeze(1).to(gt_trajs)
                 global_feature=trajectory_query.squeeze(1)
+        elif self._config.has_cmd_navi:
+            # status_feature is [B, features] when has_history=False, [B, time, features] when True
+            cmd = status_feature[:, :4] if not self._config.has_history else status_feature[:, -1, :4]
+            cmd_idx = torch.argmax(cmd, dim=1)  # [B]
+            navi_feature = self.navi_embedding(cmd_idx)  # [B, D]
+            global_feature = trajectory_query.squeeze(1)
         else:
             global_feature=trajectory_query.squeeze(1)
 
@@ -250,7 +257,7 @@ class GoalFlowTrajModel(nn.Module):
         else:
             noise=torch.randn(size=(batch_size*self._config.anchor_size,12,30),dtype=dtype,device=device)*self._config.test_scale
         
-        if self._config.has_navi or self._config.has_student_navi:
+        if self._config.has_navi or self._config.has_student_navi or self._config.has_cmd_navi:
             global_feature1=self.encode_scene_features(global_feature.unsqueeze(1))
             global_feature2=self.encode_navi_features(navi_feature.unsqueeze(1))
             global_feature=(torch.cat([global_feature1[0],global_feature2[0]],dim=-2),torch.cat([global_feature1[1],global_feature2[1]],dim=-2))
@@ -270,7 +277,7 @@ class GoalFlowTrajModel(nn.Module):
             timesteps=t*self._config.infer_steps
             
             import random
-            if self._config.has_navi:
+            if self._config.has_navi or self._config.has_cmd_navi:
                 flag=random.randint(1,3)
                 if flag==1:
                     pred=self.denoise(noisy_traj_points,timesteps,global_feature).reshape(batch_size,-1,30)
@@ -292,7 +299,7 @@ class GoalFlowTrajModel(nn.Module):
             if self._config.start:
                 trajs[:,[0],:]=normal_trajs[:1,[0],:]
 
-            if self._config.has_navi or self._config.has_student_navi:
+            if self._config.has_navi or self._config.has_student_navi or self._config.has_cmd_navi:
                 features=global_feature[0].unsqueeze(1).repeat(1,self._config.anchor_size,1,1).view(-1,2,self._config.tf_d_model)
                 embedding=global_feature[1].unsqueeze(1).repeat(1,self._config.anchor_size,1,1).view(-1,2,self._config.tf_d_model)
                 global_feature=(features,embedding)
@@ -365,7 +372,7 @@ class GoalFlowTrajModel(nn.Module):
                         else:
                             if self._config.has_student_navi:
                                 net_output_nonavi=self.denoise(trajs,t_curr,global_feature)
-                            elif self._config.has_navi:
+                            elif self._config.has_navi or self._config.has_cmd_navi:
                                 net_output_nonavi=self.denoise(trajs,t_curr,global_feature,navi_dropout=True)
                             else:
                                 net_output_nonavi=self.denoise(trajs,t_curr,global_feature)
@@ -381,7 +388,7 @@ class GoalFlowTrajModel(nn.Module):
                         else:
                             if self._config.has_student_navi:
                                 net_output_nonavi=self.denoise(trajs,t,global_feature)
-                            elif self._config.has_navi:
+                            elif self._config.has_navi or self._config.has_cmd_navi:
                                 net_output_nonavi=self.denoise(trajs,t,global_feature,navi_dropout=True)
                             else:
                                 net_output_nonavi=self.denoise(trajs,t,global_feature)
