@@ -32,6 +32,7 @@ class GoalFlowConfig:
     training: bool=True
     has_navi: bool=False
     has_student_navi: bool=False
+    has_cmd_navi: bool=False
     start: bool=True
     infer_steps: int=100
     cond_weight: float=1.0
